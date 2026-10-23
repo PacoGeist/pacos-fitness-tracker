@@ -1,0 +1,42 @@
+plugins { id 'com.android.application' }
+
+// Release signing. The key is never stored in this repository.
+// It comes from environment variables (GitHub Actions secrets) or, for local builds,
+// from a keystore.properties file next to settings.gradle (ignored by git).
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) keystorePropsFile.withInputStream { keystoreProps.load(it) }
+def signingValue = { String prop, String env -> System.getenv(env) ?: keystoreProps.getProperty(prop) }
+def releaseStoreFile = signingValue('storeFile', 'SIGNING_KEYSTORE_PATH')
+
+android {
+    // The package id keeps its original name on purpose: changing it would make phones
+    // treat updates as a different app and lose saved workouts.
+    namespace 'com.bekdevelopers.ironlog'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.bekdevelopers.ironlog'
+        minSdk 26
+        targetSdk 34
+        versionCode Integer.parseInt(project.property('APP_VERSION_CODE'))
+        versionName project.property('APP_VERSION_NAME')
+    }
+    signingConfigs {
+        release {
+            if (releaseStoreFile) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword signingValue('storePassword', 'SIGNING_STORE_PASSWORD')
+                keyAlias signingValue('keyAlias', 'SIGNING_KEY_ALIAS')
+                keyPassword signingValue('keyPassword', 'SIGNING_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseStoreFile) signingConfig signingConfigs.release
+        }
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

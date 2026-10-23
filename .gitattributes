@@ -1,0 +1,8 @@
+# Line endings: LF everywhere, in the repository and in your working copy.
+* text=auto eol=lf
+# The one exception: Windows batch files must stay CRLF, or cmd.exe can misread them.
+*.bat text eol=crlf
+# Binary files: never touch.
+*.jar binary
+*.png binary
+*.jks binary
