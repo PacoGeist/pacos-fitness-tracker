@@ -60,6 +60,7 @@ h2{font-family:var(--display);font-size:20px;margin:22px 0 10px;letter-spacing:.
 .ico.w{background:linear-gradient(135deg,var(--violet),var(--sky))}
 .ico.t{background:linear-gradient(135deg,var(--teal),var(--lime))}
 .ico.b{background:linear-gradient(135deg,var(--coral),var(--amber))}
+.ico.e{background:linear-gradient(135deg,var(--sky),var(--teal))}
 .entry .body{flex:1;min-width:0}
 .entry .name{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .entry .meta{color:var(--muted);font-size:13.5px}
@@ -70,6 +71,7 @@ h2{font-family:var(--display);font-size:20px;margin:22px 0 10px;letter-spacing:.
 .chip.t{background:color-mix(in srgb,var(--teal) 18%,transparent)}
 .chip.w{background:color-mix(in srgb,var(--violet) 16%,transparent)}
 .chip.b{background:color-mix(in srgb,var(--coral) 16%,transparent)}
+.chip.e{background:color-mix(in srgb,var(--sky) 18%,transparent)}
 .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
 .actions.two{grid-template-columns:1fr 1fr}
 .actions .btn{flex-direction:column;gap:4px;padding:11px 6px;font-size:13.5px}
@@ -195,6 +197,12 @@ input.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid va
 .tag.w{background:color-mix(in srgb,var(--violet) 16%,transparent);color:var(--violet)}
 .tag.b{background:color-mix(in srgb,var(--coral) 16%,transparent);color:var(--coral)}
 .tag.t{background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal)}
+.tag.e{background:color-mix(in srgb,var(--sky) 18%,transparent);color:var(--sky)}
+.progrow{display:flex;gap:8px;align-items:center;margin:-2px 0 10px}
+.progrow select{flex:1;min-width:0}
+.plist{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 10px}
+.plist .chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:4px 10px}
+.plist button{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 0 0 2px}
 @media (max-width:400px){#topnote{display:none}}
 @media (max-width:380px){.stats,.kpis{grid-template-columns:repeat(2,1fr)}.hero .when{font-size:26px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -223,8 +231,8 @@ input.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid va
 <script>
 "use strict";
 /* ============ Built-in catalog: common gym machines and bodyweight exercises ============ */
-// [group, name, type, primary muscles, secondary muscles, isTimedHold]
-const CATALOG_V = 1;
+// [group, name, type, primary muscles, secondary muscles, isTimedHold, catalog version that added it (default 1)]
+const CATALOG_V = 2;
 const GROUPS = ['Chest','Back','Shoulders','Arms','Legs','Core','Full body'];
 const CATALOG_LIST = [
   // ---- Weight machines ----
@@ -318,14 +326,18 @@ const CATALOG_LIST = [
   ['Full body','Burpees','body',['quads','chest'],['shoulders','triceps','abs','glutes']],
   ['Full body','Jumping Jacks','body',['calves','shoulders'],['quads','glutes']],
   ['Full body','High Knees','body',['quads'],['abs','calves']],
+  // ---- Cardio machines (added in catalog version 2) ----
+  ['Cardio','SciFit Upper Body Ergometer','ergo',['shoulders','upperback'],['biceps','triceps','chest','forearms','traps'],false,2],
 ];
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const CAT = {};
-CATALOG_LIST.forEach(([group, name, type, p, s, sec]) => { CAT[slug(name)] = {group, name, type, p, s, sec: !!sec}; });
+CATALOG_LIST.forEach(([group, name, type, p, s, sec, since]) => { CAT[slug(name)] = {group, name, type, p, s, sec: !!sec, since: since || 1}; });
 /** Adds catalog items once per catalog version; never re-adds items the user deleted. */
 function seedCatalog(d){
-  if ((d.catalogV || 0) >= CATALOG_V) return false;
+  const have = d.catalogV || 0;
+  if (have >= CATALOG_V) return false;
   for (const [key, c] of Object.entries(CAT)) {
+    if (c.since <= have) continue;   // added in a catalog version this phone already has (it may have been deleted on purpose)
     if (d.machines.some(m => m.cat === key)) continue;
     const same = d.machines.find(m => !m.cat && m.type === c.type && m.name.trim().toLowerCase() === c.name.toLowerCase());
     if (same) { same.cat = key; continue; }
@@ -344,13 +356,14 @@ const STORE = 'ironlog.data.v1';
 const NATIVE = typeof window.AndroidBridge !== 'undefined';
 /* App version and where updates are published (GitHub Releases). The phone app reports its own
    version; these values are the fallback for the browser preview. */
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const UPDATE_URL = 'https://github.com/PacoGeist/pacos-fitness-tracker/releases/latest';
 function appVersion(){ try { if (NATIVE && window.AndroidBridge.getVersion) return window.AndroidBridge.getVersion() || APP_VERSION; } catch(e){} return APP_VERSION; }
 function updateUrl(){ try { if (NATIVE && window.AndroidBridge.getUpdateUrl) return window.AndroidBridge.getUpdateUrl() || UPDATE_URL; } catch(e){} return UPDATE_URL; }
 const TREAD_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="4" r="2"/><path d="M8 21l3-6 3 2v4M6 12l3-4 4 1 3 3 3 1"/><path d="M11 15l2-4"/></svg>';
 const WEIGHT_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 7v10M18 7v10M3 9.5v5M21 9.5v5M6 12h12"/></svg>';
 const BODY_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M4.5 9.5l7.5 1.5 7.5-1.5M12 11v4.5l-3.5 5.5M12 15.5l3.5 5.5"/></svg>';
+const ERGO_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="2.5"/><path d="M12 7.5V3.5h3.5M12 12.5v4H8.5"/><path d="M7 21h10M12 16.5V21"/></svg>';
 const CLOSE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 function freshDb(){ const d = {version:1, machines:[{id:'treadmill', name:'Treadmill', type:'treadmill'}], entries:[], settings:{wUnit:'lb', dUnit:'mi', theme:'dark'}}; seedCatalog(d); return d; }
@@ -394,9 +407,23 @@ const kfmt = v => v >= 10000 ? fmtN(v/1000,1)+'k' : fmtN(v,0);
 function fmtDur(sec){ sec = Math.round(sec||0); const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60; return h ? h+':'+pad(m)+':'+pad(s) : m+':'+pad(s); }
 function fmtPace(secPerUnit){ if (!isFinite(secPerUnit) || secPerUnit <= 0) return '–'; return fmtDur(secPerUnit); }
 const machine = id => db.machines.find(m => m.id === id);
-const TYPE = { weight:{cls:'w', icon:()=>WEIGHT_ICON, word:'machine', btn:'primary'}, body:{cls:'b', icon:()=>BODY_ICON, word:'exercise', btn:'hot'}, treadmill:{cls:'t', icon:()=>TREAD_ICON, word:'treadmill', btn:'cardio'} };
+const TYPE = { weight:{cls:'w', icon:()=>WEIGHT_ICON, word:'machine', btn:'primary'}, body:{cls:'b', icon:()=>BODY_ICON, word:'exercise', btn:'hot'},
+  treadmill:{cls:'t', icon:()=>TREAD_ICON, word:'treadmill', btn:'cardio'}, ergo:{cls:'e', icon:()=>ERGO_ICON, word:'ergometer', btn:'cardio'} };
 const typeOf = m => TYPE[(m && m.type) || 'weight'] || TYPE.weight;
-const isCardio = e => (machine(e.machineId)||{}).type === 'treadmill';
+/* Cardio machines: treadmills (time, distance, incline, program) and upper body
+   ergometers (time, distance, whole-number level, program). */
+const CARDIO_TYPES = ['treadmill','ergo'];
+const isCardioT = t => CARDIO_TYPES.includes(t);
+const isCardio = e => isCardioT((machine(e.machineId)||{}).type);
+const PROGRAMS = { treadmill:['Manual','Rolling Hills','Fat Burn','5K Training','Sprint 8','Intervals'], ergo:['Manual','QuickStart','Iso-Strength','Power Burst'] };
+const customPrograms = t => (((db.settings.programs||{})[t]) || []);
+const programsFor = t => [...(PROGRAMS[t]||[]), ...customPrograms(t).filter(x => !(PROGRAMS[t]||[]).includes(x))];
+function addCustomProgram(t, name){
+  if (!name || programsFor(t).some(x => x.toLowerCase() === name.toLowerCase())) return;
+  db.settings.programs = db.settings.programs || {}; (db.settings.programs[t] = db.settings.programs[t] || []).push(name);
+}
+const cardioMin = e => (+e.duration||0)/60;
+const KIND_LABEL = { treadmill:'Treadmill', ergo:'Upper body ergometer' };
 const entryW = e => convW(+e.weight||0, e.unit);
 const entryD = e => convD(+e.distance||0, e.dunit);
 const totalReps = e => (e.reps||[]).reduce((a,b)=>a+(+b||0),0);
@@ -411,7 +438,8 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 function color(name){ return getComputedStyle(document.documentElement).getPropertyValue('--'+name).trim(); }
 function entrySummary(e){
   const m = machine(e.machineId);
-  if (m && m.type === 'treadmill') { const d = entryD(e); return fmtDur(e.duration) + ' · ' + fmtN(d,2) + ' ' + D() + (d ? ' · ' + fmtPace(e.duration/d) + '/' + D() : ''); }
+  if (m && m.type === 'treadmill') { const d = entryD(e); return [e.program, fmtDur(e.duration), fmtN(d,2) + ' ' + D(), d ? fmtPace(e.duration/d) + '/' + D() : '', +e.incline ? fmtN(+e.incline,1) + '% incline' : ''].filter(Boolean).join(' · '); }
+  if (m && m.type === 'ergo') { const d = entryD(e); return [e.program, 'Level ' + (+e.level||0), fmtDur(e.duration), d ? fmtN(d,2) + ' ' + D() : ''].filter(Boolean).join(' · '); }
   if (m && m.type === 'body') return (e.reps||[]).length + ' sets · ' + (e.reps||[]).join('/') + ' ' + repWord(m);
   return fmtN(entryW(e)) + ' ' + W() + ' · ' + (e.reps||[]).length + ' sets · ' + (e.reps||[]).join('/') + ' reps';
 }
@@ -471,6 +499,7 @@ const MUSCLE_RULES = [
   [/mountain\s*climb/i, ['abs'], ['shoulders','quads']],
   [/bridge/i, ['glutes'], ['hamstrings']],
   [/superman|bird\s*dog/i, ['lowerback'], ['glutes']],
+  [/ergometer|\bube\b|upper\s*body\s*(bike|cycle|exerciser)|arm\s*(bike|crank|cycle)/i, ['shoulders','upperback'], ['biceps','triceps','chest','forearms']],
   [/treadmill|elliptical|stair\s*climb|bike|cycl|\brun\b|\bjog/i, ['quads','hamstrings','glutes','calves'], []],
   [/leg\s*press|squat|hack|lunge|smith/i, ['quads','glutes'], ['hamstrings','calves']],
   [/leg\s*ext|quad/i, ['quads'], []],
@@ -506,7 +535,13 @@ function guessMuscles(name){
   }
   return {p:[], s:[]};
 }
-function defaultMuscles(m){ const c = catOf(m); return c ? {p:[...c.p], s:[...c.s]} : guessMuscles((m && m.name) || ''); }
+function defaultMuscles(m){
+  const c = catOf(m); if (c) return {p:[...c.p], s:[...c.s]};
+  const g = guessMuscles((m && m.name) || ''); if (g.p.length || g.s.length || !m) return g;
+  if (m.type === 'ergo') return {p:['shoulders','upperback'], s:['biceps','triceps','chest','forearms']};
+  if (m.type === 'treadmill') return {p:['quads','hamstrings','glutes','calves'], s:[]};
+  return g;
+}
 function musclesOf(m){ if (!m) return {p:[], s:[]}; return m.muscles || defaultMuscles(m); }
 function bodySvg(mus, opts = {}){
   const p = new Set(mus.p || []), s = new Set(mus.s || []);
@@ -535,7 +570,7 @@ function combineMuscles(list){
 }
 
 /* ============ App state ============ */
-const state = { tab:'log', logDate: today(), histMode:'workouts', wkView:'list', wkMetric:'volume', machineId:null, mView:'table', metric:null, sheet:null, ed:null, confirm:null };
+const state = { tab:'log', logDate: today(), histMode:'workouts', wkView:'list', wkMetric:'volume', machineId:null, mView:'table', metric:null, progFilter:'', sheet:null, ed:null, confirm:null };
 
 /* ============ Rendering ============ */
 function musCard(mus, title, extra='', wide=false){
@@ -558,13 +593,23 @@ function render(){
   drawCharts();
 }
 
+function cardioChips(e, m, full){
+  const d = entryD(e), out = [];
+  if (e.program) out.push(`<span class="chip ${typeOf(m).cls}">${esc(e.program)}</span>`);
+  if (m.type === 'ergo') out.push(`<span class="chip">Level ${+e.level||0}</span>`);
+  out.push(`<span class="chip">${fmtDur(e.duration)}</span>`);
+  if (m.type === 'ergo' || full) { if (d) out.push(`<span class="chip">${fmtN(d,2)} ${D()}</span>`); }
+  if (m.type === 'treadmill') { if (d) out.push(`<span class="chip">${fmtPace(e.duration/d)} /${D()}</span>`); if (+e.incline) out.push(`<span class="chip">${fmtN(+e.incline,1)}% incline</span>`); }
+  return out.join('');
+}
 function entryCard(e){
   const m = machine(e.machineId) || {name:'(deleted)', type:'weight'};
-  const t = m.type === 'treadmill', b = m.type === 'body', T = typeOf(m), rw = repWord(m);
-  const right = t ? `<div class="big">${fmtN(entryD(e),2)}<small>${D()}</small></div>`
+  const t = isCardioT(m.type), b = m.type === 'body', T = typeOf(m), rw = repWord(m);
+  const right = m.type === 'ergo' ? `<div class="big">${+e.level||0}<small>level</small></div>`
+              : t ? `<div class="big">${fmtN(entryD(e),2)}<small>${D()}</small></div>`
               : b ? `<div class="big">${totalReps(e)}<small>${rw} total</small></div>`
               : `<div class="big">${fmtN(entryW(e))}<small>${W()}</small></div>`;
-  const chips = t ? `<span class="chip t">${fmtDur(e.duration)} time</span>${entryD(e) ? `<span class="chip t">${fmtPace(e.duration/entryD(e))} /${D()}</span>` : ''}`
+  const chips = t ? cardioChips(e, m)
                   : `<span class="chip ${T.cls}">${(e.reps||[]).length} sets</span>` + (e.reps||[]).map(r => `<span class="chip">${r} ${rw}</span>`).join('');
   return `<button class="entry" data-act="edit" data-id="${e.id}">
     <span class="ico ${T.cls}">${T.icon()}</span>
@@ -573,11 +618,11 @@ function entryCard(e){
 
 function viewLog(){
   const d = state.logDate, list = entriesOn(d);
-  const wt = list.filter(e => (machine(e.machineId)||{}).type !== 'treadmill');
-  const tr = list.filter(e => (machine(e.machineId)||{}).type === 'treadmill');
+  const wt = list.filter(e => !isCardio(e));
+  const tr = list.filter(e => isCardio(e));
   const sets = wt.reduce((a,e)=>a+(e.reps||[]).length,0);
   const vol = wt.reduce((a,e)=>a+volume(e),0);
-  const dist = tr.reduce((a,e)=>a+entryD(e),0);
+  const cmin = tr.reduce((a,e)=>a+cardioMin(e),0);
   const isFuture = d > today();
   let body;
   if (list.length) body = `<div class="list">${list.map(entryCard).join('')}</div>`;
@@ -598,14 +643,14 @@ function viewLog(){
         <div class="stat"><b>${wt.length}</b><span>Exercises</span></div>
         <div class="stat"><b>${sets}</b><span>Sets</span></div>
         <div class="stat"><b>${vol >= 10000 ? fmtN(vol/1000,1)+'k' : fmtN(vol,0)}</b><span>Vol ${W()}</span></div>
-        <div class="stat"><b>${fmtN(dist,1)}</b><span>${D()} run</span></div>
+        <div class="stat"><b>${fmtN(cmin,0)} min</b><span>Cardio</span></div>
       </div>
     </section>
     ${isFuture ? '<div class="note warn" style="margin-top:10px">This date is in the future.</div>' : ''}
     <div class="actions">
       <button class="btn primary" data-act="add" data-type="weight">${WEIGHT_ICON}+ Machine</button>
       <button class="btn hot" data-act="add" data-type="body">${BODY_ICON}+ Exercise</button>
-      <button class="btn cardio" data-act="add" data-type="treadmill">${TREAD_ICON}+ Treadmill</button>
+      <button class="btn cardio" data-act="add" data-type="cardio">${TREAD_ICON}+ Cardio</button>
     </div>
     <h2>${list.length ? 'Logged' : ''}</h2>
     ${body}
@@ -614,6 +659,7 @@ function viewLog(){
 }
 
 /* ----- History ----- */
+function machineHist(id){ const h = historyOf(id); return state.progFilter ? h.filter(e => (e.program||'') === state.progFilter) : h; }
 function viewHistory(){
   const dates = workoutDates();
   let html = `<div class="toolbar"><div class="seg">
@@ -627,21 +673,21 @@ function viewHistory(){
       html += dates.map(dt => {
         const list = entriesOn(dt), dd = parseD(dt), mk = MONTHS[dd.getMonth()] + ' ' + dd.getFullYear();
         const head = mk !== lastMonth ? `<div class="label month">${mk}</div>` : ''; lastMonth = mk;
-        const wt = list.filter(e => (machine(e.machineId)||{}).type !== 'treadmill');
-        const tr = list.filter(e => (machine(e.machineId)||{}).type === 'treadmill');
+        const wt = list.filter(e => !isCardio(e));
+        const tr = list.filter(e => isCardio(e));
         const vol = wt.reduce((a,e)=>a+volume(e),0), dist = tr.reduce((a,e)=>a+entryD(e),0);
         return head + `<button class="wk" data-act="openwk" data-date="${dt}" style="margin-bottom:8px">
           <div class="top"><span class="d">${fmtDate(dt)}</span><span class="v">${list.length} item${list.length>1?'s':''}</span></div>
           <div class="chips">${list.map(e => { const m = machine(e.machineId)||{name:'?'}; return `<span class="chip ${typeOf(m).cls}">${esc(m.name)}</span>`; }).join('')}</div>
-          <div class="v" style="margin-top:6px">${vol ? fmtN(vol,0)+' '+W()+' volume' : wt.length ? wt.reduce((a,e)=>a+(e.reps||[]).length,0)+' sets' : ''}${wt.length && tr.length ? ' · ' : ''}${tr.length ? fmtN(dist,2)+' '+D()+' on treadmill' : ''}</div></button>`;
+          <div class="v" style="margin-top:6px">${vol ? fmtN(vol,0)+' '+W()+' volume' : wt.length ? wt.reduce((a,e)=>a+(e.reps||[]).length,0)+' sets' : ''}${wt.length && tr.length ? ' · ' : ''}${tr.length ? fmtDur(tr.reduce((a,e)=>a+(+e.duration||0),0))+' cardio'+(dist ? ' · '+fmtN(dist,2)+' '+D() : '') : ''}</div></button>`;
       }).join('');
     } else if (state.wkView === 'table') {
-      html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Items</th><th>Sets</th><th>Reps</th><th>Volume (${W()})</th><th>Run (${D()})</th><th>Run time</th></tr></thead><tbody>` +
+      html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Items</th><th>Sets</th><th>Reps</th><th>Volume (${W()})</th><th>Cardio time</th><th>Cardio (${D()})</th></tr></thead><tbody>` +
         dates.map(dt => { const list = entriesOn(dt);
-          const wt = list.filter(e => (machine(e.machineId)||{}).type !== 'treadmill'), tr = list.filter(e => (machine(e.machineId)||{}).type === 'treadmill');
-          return `<tr data-act="openwk" data-date="${dt}"><td>${fmtDate(dt)}</td><td>${list.length}</td><td>${wt.reduce((a,e)=>a+(e.reps||[]).length,0)}</td><td>${wt.reduce((a,e)=>a+countReps(e),0)}</td><td>${fmtN(wt.reduce((a,e)=>a+volume(e),0),0)}</td><td>${tr.length?fmtN(tr.reduce((a,e)=>a+entryD(e),0),2):'–'}</td><td>${tr.length?fmtDur(tr.reduce((a,e)=>a+(+e.duration||0),0)):'–'}</td></tr>`; }).join('') + `</tbody></table></div>`;
+          const wt = list.filter(e => !isCardio(e)), tr = list.filter(e => isCardio(e));
+          return `<tr data-act="openwk" data-date="${dt}"><td>${fmtDate(dt)}</td><td>${list.length}</td><td>${wt.reduce((a,e)=>a+(e.reps||[]).length,0)}</td><td>${wt.reduce((a,e)=>a+countReps(e),0)}</td><td>${fmtN(wt.reduce((a,e)=>a+volume(e),0),0)}</td><td>${tr.length?fmtDur(tr.reduce((a,e)=>a+(+e.duration||0),0)):'–'}</td><td>${tr.length?fmtN(tr.reduce((a,e)=>a+entryD(e),0),2):'–'}</td></tr>`; }).join('') + `</tbody></table></div>`;
     } else {
-      const metrics = [['volume','Volume','violet'],['sets','Total sets','sky'],['machines','Items logged','coral'],['dist','Run distance','teal']];
+      const metrics = [['volume','Volume','violet'],['sets','Total sets','sky'],['machines','Items logged','coral'],['cmin','Cardio minutes','lime'],['dist','Cardio distance','teal']];
       html += `<div class="chartbox"><div class="metrics">${metrics.map(([k,l,c])=>`<button class="${state.wkMetric===k?'on':''}" style="--mc:var(--${c})" data-act="wkmetric" data-v="${k}">${l}</button>`).join('')}</div><canvas id="chart" data-kind="workouts"></canvas></div>
         <p class="muted" style="font-size:13px">Tap or drag across the chart to see each workout.</p>`;
     }
@@ -651,11 +697,18 @@ function viewHistory(){
   const used = db.machines.filter(m => historyOf(m.id).length).sort((a,b)=>a.name.localeCompare(b.name));
   if (!used.length) return html + `<div class="empty"><b>Nothing logged yet</b></div>`;
   if (!state.machineId || !used.find(m => m.id === state.machineId)) state.machineId = used[0].id;
-  const m = machine(state.machineId), t = m.type === 'treadmill', b = m.type === 'body', h = historyOf(m.id), rw = repWord(m);
-  const og = (label, type) => { const l = used.filter(x => x.type === type); return l.length ? `<optgroup label="${label}">${l.map(x=>`<option value="${x.id}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>` : ''; };
-  html += `<div class="field"><select class="picker" id="machPick">${og('Machines','weight')}${og('Exercises','body')}${og('Treadmill','treadmill')}</select></div>
-    <div class="toolbar"><div class="seg"><button class="${state.mView==='table'?'on':''}" data-act="mview" data-v="table">Table</button><button class="${state.mView==='chart'?'on':''}" data-act="mview" data-v="chart">Chart</button></div></div>`;
-  if (t) {
+  const m = machine(state.machineId), t = m.type === 'treadmill', er = m.type === 'ergo', b = m.type === 'body', rw = repWord(m);
+  const progs = isCardioT(m.type) ? [...new Set(historyOf(m.id).map(e => e.program).filter(Boolean))] : [];
+  if (state.progFilter && !progs.includes(state.progFilter)) state.progFilter = '';
+  const h = machineHist(m.id);
+  const og = (label, test) => { const l = used.filter(x => test(x.type)); return l.length ? `<optgroup label="${label}">${l.map(x=>`<option value="${x.id}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>` : ''; };
+  html += `<div class="field"><select class="picker" id="machPick">${og('Machines',x=>x==='weight')}${og('Exercises',x=>x==='body')}${og('Cardio',isCardioT)}</select></div>
+    <div class="toolbar"><div class="seg"><button class="${state.mView==='table'?'on':''}" data-act="mview" data-v="table">Table</button><button class="${state.mView==='chart'?'on':''}" data-act="mview" data-v="chart">Chart</button></div></div>
+    ${progs.length > 1 ? `<div class="progrow"><span class="label">Program</span><select class="picker" id="progPick"><option value="">All programs</option>${progs.map(p=>`<option ${p===state.progFilter?'selected':''}>${esc(p)}</option>`).join('')}</select></div>` : ''}`;
+  if (er) {
+    const lv = h.map(e => +e.level||0), totT = h.reduce((a,e)=>a+(+e.duration||0),0), totD = h.reduce((a,e)=>a+entryD(e),0);
+    html += `<div class="kpis"><div class="kpi"><b>${h.length}</b><span>Sessions</span></div><div class="kpi"><b>${Math.max(...lv)}</b><span>Top level</span></div><div class="kpi"><b>${totT >= 3600 ? fmtN(totT/3600,1)+' h' : fmtDur(totT)}</b><span>Total time</span></div><div class="kpi"><b>${fmtN(totD,1)}</b><span>Total ${D()}</span></div></div>`;
+  } else if (t) {
     const ds = h.map(entryD), best = Math.max(...ds), totD = ds.reduce((a,b)=>a+b,0);
     const paces = h.filter(e=>entryD(e)>0).map(e=>e.duration/entryD(e));
     html += `<div class="kpis"><div class="kpi"><b>${h.length}</b><span>Runs</span></div><div class="kpi"><b>${fmtN(totD,1)}</b><span>Total ${D()}</span></div><div class="kpi"><b>${fmtN(best,2)}</b><span>Longest</span></div><div class="kpi"><b>${paces.length?fmtPace(Math.min(...paces)):'–'}</b><span>Best pace</span></div></div>`;
@@ -668,10 +721,14 @@ function viewHistory(){
   }
   if (state.mView === 'table') {
     const rows = [...h].reverse();
-    if (t) {
+    if (er) {
+      const best = Math.max(...h.map(e => +e.level||0));
+      html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Program</th><th>Level</th><th>Time</th><th>Distance (${D()})</th><th>Speed (${D()}/h)</th></tr></thead><tbody>` +
+        rows.map(e => { const d = entryD(e); return `<tr data-act="openwk" data-date="${e.date}"><td>${fmtDate(e.date)}</td><td>${esc(e.program||'–')}</td><td class="${(+e.level||0)===best?'best':''}">${+e.level||0}</td><td>${fmtDur(e.duration)}</td><td>${d?fmtN(d,2):'–'}</td><td>${d&&e.duration?fmtN(d/(e.duration/3600),1):'–'}</td></tr>`; }).join('') + `</tbody></table></div>`;
+    } else if (t) {
       const best = Math.max(...h.map(entryD));
-      html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Time</th><th>Distance (${D()})</th><th>Pace (/${D()})</th><th>Speed (${D()}/h)</th></tr></thead><tbody>` +
-        rows.map(e => { const d = entryD(e); return `<tr data-act="openwk" data-date="${e.date}"><td>${fmtDate(e.date)}</td><td>${fmtDur(e.duration)}</td><td class="${d===best?'best':''}">${fmtN(d,2)}</td><td>${d?fmtPace(e.duration/d):'–'}</td><td>${e.duration?fmtN(d/(e.duration/3600),1):'–'}</td></tr>`; }).join('') + `</tbody></table></div>`;
+      html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Program</th><th>Time</th><th>Distance (${D()})</th><th>Pace (/${D()})</th><th>Speed (${D()}/h)</th><th>Incline</th></tr></thead><tbody>` +
+        rows.map(e => { const d = entryD(e); return `<tr data-act="openwk" data-date="${e.date}"><td>${fmtDate(e.date)}</td><td>${esc(e.program||'–')}</td><td>${fmtDur(e.duration)}</td><td class="${d===best?'best':''}">${fmtN(d,2)}</td><td>${d?fmtPace(e.duration/d):'–'}</td><td>${e.duration?fmtN(d/(e.duration/3600),1):'–'}</td><td>${fmtN(+e.incline||0,1)}%</td></tr>`; }).join('') + `</tbody></table></div>`;
     } else if (b) {
       const best = Math.max(...h.map(totalReps));
       html += `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Sets</th><th>${rw==='sec'?'Seconds':'Reps'} per set</th><th>Total ${rw}</th><th>Best set</th></tr></thead><tbody>` +
@@ -683,7 +740,8 @@ function viewHistory(){
     }
     html += `<p class="muted" style="font-size:13px">Tap a row to open that whole workout. Green marks your best.</p>`;
   } else {
-    const metrics = t ? [['distance','Distance','teal'],['time','Time','sky'],['pace','Pace','coral'],['speed','Speed','lime']]
+    const metrics = er ? [['level','Level','violet'],['time','Time','sky'],['distance','Distance','teal'],['speed','Speed','lime']]
+                  : t ? [['distance','Distance','teal'],['time','Time','sky'],['pace','Pace','coral'],['speed','Speed','lime'],['incline','Incline','amber']]
                   : b ? [['btotal','Total '+rw,'coral'],['bbest','Best set','amber'],['sets','Sets','sky']]
                       : [['weight','Weight','violet'],['volume','Volume','coral'],['reps','Total reps','sky'],['sets','Sets','amber']];
     if (!state.metric || !metrics.find(x=>x[0]===state.metric)) state.metric = metrics[0][0];
@@ -705,9 +763,9 @@ function spark(vals, c){
   return `<svg class="spark" width="70" height="30" viewBox="0 0 70 30"><polyline points="${p}" fill="none" stroke="var(--${c})" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${l[0]}" cy="${l[1]}" r="3" fill="var(--${c})"/></svg>`;
 }
 function libCard(m){
-  const h = historyOf(m.id), last = h[h.length-1], T = typeOf(m), t = m.type === 'treadmill';
+  const h = historyOf(m.id), last = h[h.length-1], T = typeOf(m), t = isCardioT(m.type);
   const meta = last ? `Last: ${shortDate(last.date)} · ${entrySummary(last)}` : 'Not logged yet';
-  const trend = h.slice(-10).map(e => t ? entryD(e) : m.type === 'body' ? totalReps(e) : entryW(e));
+  const trend = h.slice(-10).map(e => m.type === 'ergo' ? (+e.level||0) : t ? entryD(e) : m.type === 'body' ? totalReps(e) : entryW(e));
   return `<button class="mach" data-act="openitem" data-id="${m.id}">
     <span class="mthumb">${bodySvg(musclesOf(m))}</span>
     <span class="body" style="min-width:0"><div style="font-weight:700;font-size:16px">${esc(m.name)}</div><div class="muted" style="font-size:13px"><span class="tag ${T.cls}">${T.word}</span> ${esc(meta)}</div>${h.length ? `<div class="muted" style="font-size:12px">${h.length} session${h.length===1?'':'s'}</div>` : ''}</span>
@@ -715,28 +773,28 @@ function libCard(m){
 }
 function libList(){
   const q = (state.libQ || '').trim().toLowerCase(), f = state.libType || 'all';
-  const all = db.machines.filter(m => (f === 'all' || m.type === f) && (!q || m.name.toLowerCase().includes(q) || groupOf(m).toLowerCase().includes(q) || muscleText(musclesOf(m)).toLowerCase().includes(q)));
+  const all = db.machines.filter(m => (f === 'all' || m.type === f || (f === 'cardio' && isCardioT(m.type))) && (!q || m.name.toLowerCase().includes(q) || groupOf(m).toLowerCase().includes(q) || muscleText(musclesOf(m)).toLowerCase().includes(q)));
   if (!all.length) return `<div class="empty"><b>Nothing matches “${esc(state.libQ)}”</b>Add it as a new machine or exercise below.</div>`;
   const used = all.filter(m => historyOf(m.id).length).sort((a,b) => lastEntryOf(b.id).date.localeCompare(lastEntryOf(a.id).date));
   const rest = all.filter(m => !historyOf(m.id).length);
   let html = used.length ? `<div class="label libsec">Recently used</div><div class="list">${used.map(libCard).join('')}</div>` : '';
   [...GROUPS, 'My own'].forEach(g => {
-    const l = rest.filter(m => m.type !== 'treadmill' && groupOf(m) === g).sort((a,b) => (a.type===b.type?0:a.type==='weight'?-1:1) || a.name.localeCompare(b.name));
+    const l = rest.filter(m => !isCardioT(m.type) && groupOf(m) === g).sort((a,b) => (a.type===b.type?0:a.type==='weight'?-1:1) || a.name.localeCompare(b.name));
     if (l.length) html += `<div class="label libsec">${g}</div><div class="list">${l.map(libCard).join('')}</div>`;
   });
-  const tr = rest.filter(m => m.type === 'treadmill');
-  if (tr.length) html += `<div class="label libsec">Treadmill</div><div class="list">${tr.map(libCard).join('')}</div>`;
+  const tr = rest.filter(m => isCardioT(m.type)).sort((a,b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  if (tr.length) html += `<div class="label libsec">Cardio</div><div class="list">${tr.map(libCard).join('')}</div>`;
   return html;
 }
 function viewMachines(){
   const f = state.libType || 'all';
   return `<h2>Machines &amp; exercises</h2>
     <input class="search" id="libQ" type="search" placeholder="Search by name or muscle, e.g. chest" value="${esc(state.libQ||'')}" autocomplete="off">
-    <div class="toolbar"><div class="seg">${[['all','All'],['weight','Machines'],['body','Exercises'],['treadmill','Treadmill']].map(([v,l])=>`<button class="${f===v?'on':''}" data-act="libtype" data-v="${v}">${l}</button>`).join('')}</div></div>
+    <div class="toolbar"><div class="seg">${[['all','All'],['weight','Machines'],['body','Exercises'],['cardio','Cardio']].map(([v,l])=>`<button class="${f===v?'on':''}" data-act="libtype" data-v="${v}">${l}</button>`).join('')}</div></div>
     <div class="actions">
       <button class="btn primary" data-act="newitem" data-type="weight">${WEIGHT_ICON}New machine</button>
       <button class="btn hot" data-act="newitem" data-type="body">${BODY_ICON}New exercise</button>
-      <button class="btn cardio" data-act="newitem" data-type="treadmill">${TREAD_ICON}New treadmill</button>
+      <button class="btn cardio" data-act="newitem" data-type="treadmill">${TREAD_ICON}New cardio</button>
     </div>
     <div id="liblist">${libList()}</div>`;
 }
@@ -745,7 +803,7 @@ function viewMachines(){
 function openItem(id){
   const m = machine(id); if (!m) return; state.sheet = 'item'; state.itemId = id;
   const h = historyOf(id), last = h[h.length-1], T = typeOf(m);
-  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><div><div class="label">${m.type==='treadmill'?'Treadmill':groupOf(m)+' · '+T.word}</div><h3>${esc(m.name)}</h3></div><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
+  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><div><div class="label">${isCardioT(m.type)?'Cardio · '+KIND_LABEL[m.type]:groupOf(m)+' · '+T.word}</div><h3>${esc(m.name)}</h3></div><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
     <div class="form">
       ${musCard(musclesOf(m), 'Muscles worked', `<button class="linkbtn" data-act="editmus" data-id="${m.id}" style="margin-top:8px">Change muscles</button>`, true)}
       <div class="note">${last ? `Last done ${fmtDate(last.date)}: ${esc(entrySummary(last))}` : 'You haven’t logged this yet.'}</div>
@@ -758,13 +816,14 @@ function openItem(id){
 /* --- New item without logging it --- */
 function openNewItem(type, err){
   state.sheet = 'newitem'; const n = state.newItem || (state.newItem = {type, name:'', hold:false}); if (type) n.type = type;
-  const T = TYPE[n.type], mu = n.type === 'treadmill' ? defaultMuscles({name:'treadmill'}) : guessMuscles(n.name);
-  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><h3>New ${T.word}</h3><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
+  const T = TYPE[n.type], mu = defaultMuscles({name:n.name, type:n.type});
+  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><h3>New ${isCardioT(n.type) ? 'cardio machine' : T.word}</h3><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
     <div class="form">
-      <div class="field"><span class="label">Type</span><div class="seg">${[['weight','Machine'],['body','Exercise'],['treadmill','Treadmill']].map(([v,l])=>`<button class="${n.type===v?'on':''}" data-act="nitype" data-v="${v}">${l}</button>`).join('')}</div></div>
-      <div class="field"><span class="label">Name</span><input id="niName" value="${esc(n.name)}" placeholder="${n.type==='weight'?'e.g. Glute Drive':n.type==='body'?'e.g. Bear Crawls':'e.g. Treadmill 2'}" autocomplete="off"></div>
+      <div class="field"><span class="label">Type</span><div class="seg">${[['weight','Machine'],['body','Exercise'],['treadmill','Treadmill'],['ergo','Ergometer']].map(([v,l])=>`<button class="${n.type===v?'on':''}" data-act="nitype" data-v="${v}">${l}</button>`).join('')}</div>
+        ${n.type==='ergo' ? '<div class="muted" style="font-size:12.5px">Upper body ergometer (arm bike): logs program, level, time and distance.</div>' : n.type==='treadmill' ? '<div class="muted" style="font-size:12.5px">Logs program, time, distance and incline.</div>' : ''}</div>
+      <div class="field"><span class="label">Name</span><input id="niName" value="${esc(n.name)}" placeholder="${n.type==='weight'?'e.g. Glute Drive':n.type==='body'?'e.g. Bear Crawls':n.type==='ergo'?'e.g. Arm Bike 2':'e.g. Treadmill 2'}" autocomplete="off"></div>
       ${n.type==='body' ? `<div class="field"><span class="label">Count each set in</span><div class="seg"><button class="${!n.hold?'on':''}" data-act="nihold" data-v="0">Reps</button><button class="${n.hold?'on':''}" data-act="nihold" data-v="1">Seconds (holds)</button></div></div>` : ''}
-      ${n.type!=='treadmill' ? `<div id="niMus">${niMus(mu)}</div>` : ''}
+      <div id="niMus">${niMus(mu)}</div>
       ${err ? `<div class="err">${esc(err)}</div>` : ''}
       <div class="btnrow"><button class="btn ghost" data-act="close">Cancel</button><button class="btn ${T.btn}" data-act="saveitem">Add to library</button></div>
     </div>`);
@@ -792,6 +851,10 @@ function viewSettings(){
     <h2>Units</h2><div class="card">
       <div class="set-row"><div><b>Weight</b><div class="muted" style="font-size:13px">Past entries convert automatically</div></div>${segs('wUnit',[['lb','lb'],['kg','kg']])}</div>
       <div class="set-row"><div><b>Distance</b></div>${segs('dUnit',[['mi','miles'],['km','km']])}</div></div>
+    <h2>Cardio programs</h2><div class="card">
+      ${CARDIO_TYPES.map(k => `<div style="padding-top:10px"><b>${KIND_LABEL[k]}</b><div class="plist">${PROGRAMS[k].map(p=>`<span class="chip">${esc(p)}</span>`).join('')}${customPrograms(k).map(p=>`<span class="chip ${TYPE[k].cls}">${esc(p)}<button data-act="delprog" data-k="${k}" data-p="${esc(p)}" aria-label="Remove ${esc(p)}">×</button></span>`).join('')}</div></div>`).join('')}
+      <div class="muted" style="font-size:13px;padding-bottom:8px">Add your own by choosing “+ New program…” when you log a workout. Removing one you added doesn’t change past workouts.</div>
+    </div>
     <h2>App updates</h2><div class="card">
       <div class="set-row"><div><b>Version ${esc(appVersion())}</b><div class="muted" style="font-size:13px">New versions are published on GitHub</div></div>
         ${NATIVE ? `<button class="btn primary" data-act="update">Check for updates</button>` : `<a class="btn primary" href="${esc(updateUrl())}" target="_blank" rel="noopener" style="text-decoration:none">Check for updates</a>`}</div>
@@ -817,12 +880,20 @@ function startEditor(type, entryId, presetMachine){
   if (entryId) {
     const e = db.entries.find(x => x.id === entryId), m = machine(e.machineId);
     type = m ? m.type : 'weight';
-    ed = { id:e.id, type, date:e.date, machineId:e.machineId, newName:'', weight:entryW(e), reps:[...(e.reps||[10,10,10])], min:Math.floor((e.duration||0)/60), sec:Math.round((e.duration||0)%60), distance:entryD(e), from:null };
+    ed = { id:e.id, type, cardio:isCardioT(type), date:e.date, machineId:e.machineId, newName:'', weight:entryW(e), reps:[...(e.reps||[10,10,10])], min:Math.floor((e.duration||0)/60), sec:Math.round((e.duration||0)%60), distance:entryD(e),
+      incline: e.incline ?? '', level: e.level ?? '', program: e.program || 'Manual', newProgram:'', from:null };
   } else {
-    ed = { id:null, type, date:state.logDate, machineId:'', newName:'', weight:'', reps: type==='body' ? [15,15,15] : [10,10,10], min:'', sec:'', distance:'', from:null, hold:false };
-    const opts = db.machines.filter(m => m.type === type);
+    const cardio = type === 'cardio' || isCardioT(type);
+    if (type === 'cardio') {
+      // default to the cardio machine used most recently, else the first treadmill
+      const lastC = db.entries.filter(isCardio).sort(byDateThenCreated).pop();
+      presetMachine = presetMachine || (lastC && lastC.machineId) || (db.machines.find(m => m.id === 'treadmill') || db.machines.find(m => isCardioT(m.type)) || {}).id;
+      type = (machine(presetMachine) || {type:'treadmill'}).type;
+    }
+    ed = { id:null, type, cardio, date:state.logDate, machineId:'', newName:'', weight:'', reps: type==='body' ? [15,15,15] : [10,10,10], min:'', sec:'', distance:'', incline:'', level:'', program:'Manual', newProgram:'', from:null, hold:false };
+    const opts = cardio ? db.machines.filter(m => isCardioT(m.type)) : db.machines.filter(m => m.type === type);
     if (presetMachine) ed.machineId = presetMachine;
-    else if (type === 'treadmill') ed.machineId = opts.length ? (opts.find(m=>m.id==='treadmill')||opts[0]).id : '__new';
+    else if (cardio) ed.machineId = opts.length ? (opts.find(m=>m.id==='treadmill')||opts[0]).id : '__new';
     else ed.machineId = opts.length ? '' : '__new';
     if (ed.machineId && ed.machineId !== '__new') autofill(ed);
   }
@@ -831,17 +902,18 @@ function startEditor(type, entryId, presetMachine){
 function autofill(ed){
   const last = lastEntryOf(ed.machineId, ed.id);
   if (!last) { ed.from = null; if (ed.type === 'body') ed.reps = isHold(machine(ed.machineId)) ? [30,30,30] : [15,15,15]; else if (ed.type === 'weight') ed.reps = [10,10,10]; return; }
-  if (ed.type === 'treadmill') { ed.min = Math.floor((last.duration||0)/60); ed.sec = Math.round((last.duration||0)%60); ed.distance = entryD(last); }
+  if (isCardioT(ed.type)) { ed.min = Math.floor((last.duration||0)/60); ed.sec = Math.round((last.duration||0)%60); ed.distance = entryD(last);
+    ed.program = last.program || 'Manual'; ed.incline = last.incline ?? ''; ed.level = last.level ?? ''; }
   else { ed.weight = entryW(last); ed.reps = [...(last.reps||[10])]; }
   ed.from = last.date;
 }
 function renderEditor(err){
-  const ed = state.ed, t = ed.type === 'treadmill';
-  const b = ed.type === 'body', T = TYPE[ed.type], word = T.word, edm = machine(ed.machineId);
-  const opts = db.machines.filter(m => m.type === ed.type).sort((a,b)=>a.name.localeCompare(b.name));
+  const ed = state.ed, t = isCardioT(ed.type), tm = ed.type === 'treadmill';
+  const b = ed.type === 'body', T = TYPE[ed.type], word = t ? 'cardio machine' : T.word, edm = machine(ed.machineId);
+  const opts = db.machines.filter(m => t ? isCardioT(m.type) : m.type === ed.type).sort((a,b)=>a.name.localeCompare(b.name));
   let selDone = false; const opt = m => { const on = !selDone && m.id === ed.machineId; if (on) selDone = true; return `<option value="${m.id}" ${on?'selected':''}>${esc(m.name)}</option>`; };
   let body = '';
-  if (t) body = opts.map(opt).join('');
+  if (t) CARDIO_TYPES.forEach(k => { const l = opts.filter(m => m.type === k); if (l.length) body += `<optgroup label="${KIND_LABEL[k]}s">${l.map(opt).join('')}</optgroup>`; });
   else {
     const recent = opts.filter(m => historyOf(m.id).length).sort((a,b) => lastEntryOf(b.id).date.localeCompare(lastEntryOf(a.id).date)).slice(0,8);
     if (recent.length) body += `<optgroup label="Recently used">${recent.map(opt).join('')}</optgroup>`;
@@ -855,14 +927,22 @@ function renderEditor(err){
   const note = ed.from ? `<div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Filled in from your last session on ${fmtDate(ed.from)}. Change anything before saving.</div>` : '';
   let fields;
   if (t) {
-    const dur = (+ed.min||0)*60 + (+ed.sec||0), dist = +ed.distance||0;
-    fields = `<div class="field"><span class="label">Time ran</span><div class="two">
+    const dur = (+ed.min||0)*60 + (+ed.sec||0), dist = +ed.distance||0, progs = programsFor(ed.type);
+    const progSel = `<div class="field"><span class="label">Program</span><select id="edProgram" class="picker">${[...new Set([...progs, ...(ed.program && ed.program !== '__newprog' && !progs.includes(ed.program) ? [ed.program] : [])])].map(p=>`<option ${p===ed.program?'selected':''}>${esc(p)}</option>`).join('')}<option value="__newprog" ${ed.program==='__newprog'?'selected':''}>+ New program…</option></select>
+        ${ed.program==='__newprog' ? `<input id="edNewProg" placeholder="Program name, e.g. Hill Climb" value="${esc(ed.newProgram)}" autocomplete="off">` : ''}</div>`;
+    const kindSel = ed.machineId === '__new' ? `<div class="field"><span class="label">Kind of machine</span><div class="seg">${CARDIO_TYPES.map(k=>`<button class="${ed.type===k?'on':''}" data-act="edkind" data-v="${k}">${KIND_LABEL[k]}</button>`).join('')}</div></div>` : '';
+    fields = kindSel + progSel + (ed.type === 'ergo' ? `<div class="field"><span class="label">Level</span>
+        <div class="stepper"><button data-act="step" data-f="level" data-s="-1" aria-label="Lower level">−</button><input id="edLevel" inputmode="numeric" value="${ed.level}" placeholder="0"><button data-act="step" data-f="level" data-s="1" aria-label="Higher level">+</button></div></div>` : '') +
+      `<div class="field"><span class="label">${tm?'Time ran':'Time'}</span><div class="two">
         <div class="stepper"><button data-act="step" data-f="min" data-s="-1" aria-label="Less minutes">−</button><input id="edMin" inputmode="numeric" value="${ed.min}" placeholder="min" aria-label="Minutes"><button data-act="step" data-f="min" data-s="1" aria-label="More minutes">+</button></div>
         <div class="stepper"><button data-act="step" data-f="sec" data-s="-5" aria-label="Less seconds">−</button><input id="edSec" inputmode="numeric" value="${ed.sec}" placeholder="sec" aria-label="Seconds"><button data-act="step" data-f="sec" data-s="5" aria-label="More seconds">+</button></div></div>
         <div class="muted" style="font-size:12px;display:flex;justify-content:space-between"><span>minutes</span><span>seconds</span></div></div>
-      <div class="field"><span class="label">Distance ran (${D()})</span>
-        <div class="stepper"><button data-act="step" data-f="distance" data-s="-0.1" aria-label="Less distance">−</button><input id="edDist" inputmode="decimal" value="${ed.distance}" placeholder="0.00"><button data-act="step" data-f="distance" data-s="0.1" aria-label="More distance">+</button></div></div>
-      <div class="derived" id="derived"><div><b>${dist&&dur?fmtPace(dur/dist):'–'}</b><span>Pace /${D()}</span></div><div><b>${dist&&dur?fmtN(dist/(dur/3600),1):'–'}</b><span>Speed ${D()}/h</span></div></div>`;
+      <div class="field"><span class="label">${tm?'Distance ran':'Distance'} (${D()})</span>
+        <div class="stepper"><button data-act="step" data-f="distance" data-s="-0.1" aria-label="Less distance">−</button><input id="edDist" inputmode="decimal" value="${ed.distance}" placeholder="0.00"><button data-act="step" data-f="distance" data-s="0.1" aria-label="More distance">+</button></div></div>` +
+      (tm ? `<div class="field"><span class="label">Incline (%)</span>
+        <div class="stepper"><button data-act="step" data-f="incline" data-s="-0.5" aria-label="Less incline">−</button><input id="edIncline" inputmode="decimal" value="${ed.incline}" placeholder="0"><button data-act="step" data-f="incline" data-s="0.5" aria-label="More incline">+</button></div>
+        <div class="muted" style="font-size:12px">The incline you set, or the average or highest if the program changed it.</div></div>` : '') +
+      `<div class="derived" id="derived">${derivedHtml()}</div>`;
   } else {
     const step = W()==='kg' ? 2.5 : 5;
     fields = (b ? (ed.machineId === '__new' ? `<div class="field"><span class="label">Count each set in</span><div class="seg"><button class="${!ed.hold?'on':''}" data-act="edhold" data-v="0">Reps</button><button class="${ed.hold?'on':''}" data-act="edhold" data-v="1">Seconds (holds)</button></div></div>` : '')
@@ -873,11 +953,11 @@ function renderEditor(err){
       <div class="field"><span class="label">${rw==='sec'?'Seconds':'Reps'} per set</span><div class="sets">
         ${ed.reps.map((r,i)=>`<div class="setbox"><label for="rep${i}">Set ${i+1}</label><input id="rep${i}" data-rep="${i}" inputmode="numeric" value="${r}"></div>`).join('')}</div></div>`;
   }
-  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><div><h3>${ed.id?'Edit':'Add'} ${t?'treadmill run':word}</h3></div><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
+  openSheet(`<div class="sheethead"><span class="ico ${T.cls}">${T.icon()}</span><div><h3>${ed.id?'Edit':'Add'} ${tm?'treadmill run':ed.type==='ergo'?'ergometer workout':word}</h3></div><button class="xbtn" data-act="close" aria-label="Close">${CLOSE_ICON}</button></div>
     <div class="form">
       <div class="field"><span class="label">Workout date</span><input type="date" id="edDate" value="${ed.date}" max="${today()}"></div>
-      <div class="field"><span class="label">${t?'Treadmill':b?'Exercise':'Machine'}</span>${sel}
-        ${ed.machineId==='__new' ? `<input id="edNew" placeholder="${t?'e.g. Treadmill 2':b?'e.g. Bear Crawls':'e.g. Glute Drive'}" value="${esc(ed.newName)}" autocomplete="off">` : ''}</div>
+      <div class="field"><span class="label">${t?'Cardio machine':b?'Exercise':'Machine'}</span>${sel}
+        ${ed.machineId==='__new' ? `<input id="edNew" placeholder="${tm?'e.g. Treadmill 2':t?'e.g. Arm Bike 2':b?'e.g. Bear Crawls':'e.g. Glute Drive'}" value="${esc(ed.newName)}" autocomplete="off">` : ''}</div>
       ${note}
       ${ed.machineId ? `<div id="edMus">${editorMus(ed)}</div>` : ''}
       ${ed.machineId || t ? fields : `<div class="muted" style="font-size:14px">Pick ${b?'an exercise':'a machine'} from the list. If you've done it before, your last ${b?'sets and reps':'weight, sets and reps'} fill in automatically. Not listed? Choose “+ New ${word}”.</div>`}
@@ -888,21 +968,25 @@ function renderEditor(err){
   if (ed.machineId==='__new' && !ed.newName) setTimeout(()=>{ const n = $('#edNew'); if (n) n.focus(); }, 280);
 }
 function editorMus(ed){
-  const m = ed.machineId === '__new' ? {name: ed.newName || ''} : machine(ed.machineId);
+  const m = ed.machineId === '__new' ? {name: ed.newName || '', type: ed.type} : machine(ed.machineId);
   const mu = musclesOf(m);
   if (ed.machineId === '__new' && !mu.p.length && !mu.s.length) return `<div class="muted" style="font-size:13px">Type the name and the muscles it works will show here. You can change them later from the Library tab.</div>`;
   return musCard(mu, 'Muscles worked');
 }
+function derivedHtml(){
+  const ed = state.ed, dur = (+ed.min||0)*60 + (+ed.sec||0), dist = +ed.distance||0;
+  const speed = `<div><b>${dist&&dur?fmtN(dist/(dur/3600),1):'–'}</b><span>Speed ${D()}/h</span></div>`;
+  return ed.type === 'treadmill' ? `<div><b>${dist&&dur?fmtPace(dur/dist):'–'}</b><span>Pace /${D()}</span></div>` + speed : speed;
+}
 function updateDerived(){
-  const ed = state.ed; if (!ed || ed.type !== 'treadmill') return;
-  const dur = (+ed.min||0)*60 + (+ed.sec||0), dist = +ed.distance||0, el = $('#derived'); if (!el) return;
-  el.innerHTML = `<div><b>${dist&&dur?fmtPace(dur/dist):'–'}</b><span>Pace /${D()}</span></div><div><b>${dist&&dur?fmtN(dist/(dur/3600),1):'–'}</b><span>Speed ${D()}/h</span></div>`;
+  const ed = state.ed; if (!ed || !isCardioT(ed.type)) return;
+  const el = $('#derived'); if (el) el.innerHTML = derivedHtml();
 }
 function saveEntry(){
-  const ed = state.ed, t = ed.type === 'treadmill';
+  const ed = state.ed, t = isCardioT(ed.type);
   if (!ed.date) return renderEditor('Choose a date for this workout.');
   let mid = ed.machineId;
-  const word = TYPE[ed.type].word;
+  const word = t ? 'cardio machine' : TYPE[ed.type].word;
   if (!mid) return renderEditor(`Choose ${ed.type==='body'?'an exercise':'a machine'}, or pick “+ New ${word}”.`);
   if (mid === '__new') {
     const name = (ed.newName||'').trim();
@@ -912,10 +996,16 @@ function saveEntry(){
   }
   let rec;
   if (t) {
-    const dur = (+ed.min||0)*60 + (+ed.sec||0), dist = parseFloat(ed.distance);
-    if (dur <= 0) return renderEditor('Enter how long you ran.');
-    if (!(dist >= 0)) return renderEditor('Enter the distance you ran.');
-    rec = { machineId:mid, date:ed.date, duration:dur, distance:dist, dunit:D() };
+    const dur = (+ed.min||0)*60 + (+ed.sec||0), er = ed.type === 'ergo';
+    const dist = String(ed.distance).trim() === '' && er ? 0 : parseFloat(ed.distance);
+    let program = ed.program;
+    if (program === '__newprog') { program = (ed.newProgram||'').trim(); if (!program) return renderEditor('Type a name for the new program, or pick one from the list.'); }
+    if (dur <= 0) return renderEditor(er ? 'Enter how long you worked out.' : 'Enter how long you ran.');
+    if (!(dist >= 0)) return renderEditor(er ? 'Enter the distance (0 if the machine didn\u2019t show one).' : 'Enter the distance you ran.');
+    rec = { machineId:mid, date:ed.date, duration:dur, distance:dist, dunit:D(), program: program || 'Manual' };
+    if (er) { const lv = parseInt(ed.level, 10); if (!(lv >= 0)) return renderEditor('Enter the level (a whole number, 0 or higher).'); rec.level = lv; }
+    else { const inc = String(ed.incline).trim() === '' ? 0 : parseFloat(ed.incline); if (!(inc >= 0 && inc <= 40)) return renderEditor('Enter an incline between 0 and 40%.'); rec.incline = Math.round(inc*10)/10; }
+    addCustomProgram(ed.type, rec.program);
   } else if (ed.type === 'body') {
     const reps = ed.reps.map(r => parseInt(r,10));
     if (reps.some(r => !(r >= 0))) return renderEditor('Enter a number for every set.');
@@ -939,11 +1029,11 @@ function openWorkout(date){
   state.sheet = 'workout'; state.wkDate = date;
   const list = entriesOn(date), isToday = date === today(), c = state.confirm;
   const todayCount = entriesOn(today()).length;
-  const rows = list.map(e => { const m = machine(e.machineId)||{name:'?',type:'weight'}, t = m.type==='treadmill', T = typeOf(m);
-    const chips = t ? `<span class="chip t">${fmtDur(e.duration)}</span><span class="chip t">${fmtN(entryD(e),2)} ${D()}</span>${entryD(e)?`<span class="chip t">${fmtPace(e.duration/entryD(e))}/${D()}</span>`:''}`
+  const rows = list.map(e => { const m = machine(e.machineId)||{name:'?',type:'weight'}, t = isCardioT(m.type), T = typeOf(m);
+    const chips = t ? cardioChips(e, m, true)
       : (m.type==='body' ? '' : `<span class="chip w">${fmtN(entryW(e))} ${W()}</span>`) + (e.reps||[]).map((r,i)=>`<span class="chip">Set ${i+1}: ${r}${isHold(m)?' sec':''}</span>`).join('');
     return `<div class="detail-entry"><span class="ico ${T.cls}" style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none">${T.icon()}</span><div style="flex:1;min-width:0"><b>${esc(m.name)}</b><div class="chips">${chips}</div></div></div>`; }).join('');
-  const wt = list.filter(e => (machine(e.machineId)||{}).type !== 'treadmill');
+  const wt = list.filter(e => !isCardio(e));
   let copyBtn;
   if (isToday) copyBtn = `<div class="note">This is today's workout.</div>`;
   else if (c === 'copy') copyBtn = `<div class="note warn">Today already has ${todayCount} item${todayCount>1?'s':''} logged. Add these ${list.length} as well?</div><div class="btnrow"><button class="btn ghost" data-act="nocopy">Cancel</button><button class="btn hot" data-act="docopy">Add to today</button></div>`;
@@ -1004,20 +1094,20 @@ function drawCharts(){
   let pts = [], c = 'violet', fmt = v => fmtN(v,1), bar = false, unit = '';
   if (cv.dataset.kind === 'workouts') {
     const dates = workoutDates().reverse();
-    const mm = {volume:['violet',W()+' volume'], sets:['sky','sets'], machines:['coral','machines'], dist:['teal',D()]}[state.wkMetric];
+    const mm = {volume:['violet',W()+' volume'], sets:['sky','sets'], machines:['coral','machines'], dist:['teal',D()], cmin:['lime','cardio min']}[state.wkMetric];
     c = mm[0]; unit = mm[1]; bar = true;
-    pts = dates.map(d => { const l = entriesOn(d), wt = l.filter(e => (machine(e.machineId)||{}).type !== 'treadmill'), tr = l.filter(e => (machine(e.machineId)||{}).type === 'treadmill');
-      const y = state.wkMetric==='volume' ? wt.reduce((a,e)=>a+volume(e),0) : state.wkMetric==='sets' ? wt.reduce((a,e)=>a+(e.reps||[]).length,0) : state.wkMetric==='machines' ? l.length : tr.reduce((a,e)=>a+entryD(e),0);
+    pts = dates.map(d => { const l = entriesOn(d), wt = l.filter(e => !isCardio(e)), tr = l.filter(e => isCardio(e));
+      const y = state.wkMetric==='volume' ? wt.reduce((a,e)=>a+volume(e),0) : state.wkMetric==='sets' ? wt.reduce((a,e)=>a+(e.reps||[]).length,0) : state.wkMetric==='machines' ? l.length : state.wkMetric==='cmin' ? tr.reduce((a,e)=>a+cardioMin(e),0) : tr.reduce((a,e)=>a+entryD(e),0);
       return {x:d, y}; });
-    if (state.wkMetric==='dist') { fmt = v => fmtN(v,2); pts = pts.filter(p=>p.y>0); }
+    if (state.wkMetric==='dist' || state.wkMetric==='cmin') { fmt = state.wkMetric==='dist' ? v => fmtN(v,2) : v => fmtN(v,0); pts = pts.filter(p=>p.y>0); }
     else if (state.wkMetric==='volume') fmt = v => v>=10000 ? fmtN(v/1000,1)+'k' : fmtN(v,0);
   } else {
-    const h = historyOf(state.machineId), k = state.metric;
+    const h = machineHist(state.machineId), k = state.metric;
     const defs = { weight:['violet',W(),e=>entryW(e)], volume:['coral',W()+' volume',volume], reps:['sky','reps',totalReps], sets:['amber','sets',e=>(e.reps||[]).length],
-      distance:['teal',D(),entryD], btotal:['coral',repWord(machine(state.machineId)),totalReps], bbest:['amber',repWord(machine(state.machineId))+' best set',e=>Math.max(0,...(e.reps||[]).map(Number))], time:['sky','',e=>e.duration/60], pace:['coral','/'+D(),e=>entryD(e)?e.duration/entryD(e):null], speed:['lime',D()+'/h',e=>e.duration?entryD(e)/(e.duration/3600):null] };
+      distance:['teal',D(),entryD], level:['violet','level',e=>+e.level||0], incline:['amber','% incline',e=>+e.incline||0], btotal:['coral',repWord(machine(state.machineId)),totalReps], bbest:['amber',repWord(machine(state.machineId))+' best set',e=>Math.max(0,...(e.reps||[]).map(Number))], time:['sky','',e=>e.duration/60], pace:['coral','/'+D(),e=>entryD(e)?e.duration/entryD(e):null], speed:['lime',D()+'/h',e=>e.duration?entryD(e)/(e.duration/3600):null] };
     const dd = defs[k]; c = dd[0]; unit = dd[1];
     pts = h.map(e => ({x:e.date, y:dd[2](e)})).filter(p => p.y != null && isFinite(p.y));
-    bar = k === 'sets'; if (k === 'btotal' || k === 'bbest') fmt = v => fmtN(v,0);
+    bar = k === 'sets'; if (k === 'btotal' || k === 'bbest' || k === 'level') fmt = v => fmtN(v,0);
     if (k === 'time') fmt = v => fmtDur(v*60);
     else if (k === 'pace') fmt = v => fmtPace(v);
     else if (k === 'distance') fmt = v => fmtN(v,2);
@@ -1091,7 +1181,10 @@ document.addEventListener('click', ev => {
     case 'step': { const f = el.dataset.f, s = +el.dataset.s; let v = (parseFloat(ed[f])||0) + s;
       if (f === 'sec') { let tot = (+ed.min||0)*60 + (+ed.sec||0) + s; tot = Math.max(0, tot); ed.min = Math.floor(tot/60); ed.sec = tot%60; $('#edMin').value = ed.min; $('#edSec').value = ed.sec; updateDerived(); break; }
       v = Math.max(0, f === 'distance' ? Math.round(v*100)/100 : v); ed[f] = v;
-      const id = {weight:'#edWeight', min:'#edMin', distance:'#edDist'}[f]; $(id).value = v; updateDerived(); break; }
+      if (f === 'level') v = Math.round(v);
+      if (f === 'incline') v = Math.min(40, Math.round(v*2)/2);
+      ed[f] = v;
+      const id = {weight:'#edWeight', min:'#edMin', distance:'#edDist', level:'#edLevel', incline:'#edIncline'}[f]; $(id).value = v; updateDerived(); break; }
     case 'sets': { const n = Math.max(1, Math.min(12, ed.reps.length + +el.dataset.s)); while (ed.reps.length < n) ed.reps.push(ed.reps[ed.reps.length-1] ?? 10); ed.reps.length = n; renderEditor(); break; }
     case 'hmode': state.histMode = el.dataset.v; render(); break;
     case 'wkview': state.wkView = el.dataset.v; render(); break;
@@ -1103,7 +1196,7 @@ document.addEventListener('click', ev => {
     case 'docopy': copyToToday(); break;
     case 'nocopy': state.confirm = null; openWorkout(state.wkDate); break;
     case 'editday': state.logDate = el.dataset.date; state.tab = 'log'; closeSheet(); render(); window.scrollTo(0,0); break;
-    case 'openm': closeSheet(); state.tab = 'history'; state.histMode = 'machine'; state.machineId = el.dataset.id; state.metric = null; render(); window.scrollTo(0,0); break;
+    case 'openm': closeSheet(); state.tab = 'history'; state.histMode = 'machine'; state.machineId = el.dataset.id; state.metric = null; state.progFilter = ''; render(); window.scrollTo(0,0); break;
     case 'managem': state.confirm = null; openManage(el.dataset.id); break;
     case 'openitem': openItem(el.dataset.id); break;
     case 'logitem': { const m = machine(el.dataset.id); closeSheet(); startEditor(m.type, null, m.id); break; }
@@ -1112,6 +1205,8 @@ document.addEventListener('click', ev => {
     case 'nitype': openNewItem(el.dataset.v); break;
     case 'nihold': state.newItem.hold = el.dataset.v === '1'; openNewItem(); break;
     case 'saveitem': saveNewItem(); break;
+    case 'edkind': { ed.type = el.dataset.v; ed.program = 'Manual'; renderEditor(); break; }
+    case 'delprog': { const k = el.dataset.k, p = el.dataset.p; if (db.settings.programs && db.settings.programs[k]) db.settings.programs[k] = db.settings.programs[k].filter(x => x !== p); saveDb(); render(); toast('Removed ' + p); break; }
     case 'edhold': { ed.hold = el.dataset.v === '1'; ed.reps = ed.reps.map(() => ed.hold ? 30 : 15); renderEditor(); break; }
     case 'rename': { const v = $('#renameIn').value.trim(); if (!v) return; machine(state.manageId).name = v; saveDb(); closeSheet(); render(); toast('Renamed to ' + v); break; }
     case 'askdelm': state.confirm = 'delm'; openManage(state.manageId); break;
@@ -1137,23 +1232,29 @@ document.addEventListener('click', ev => {
 document.addEventListener('input', ev => {
   const t = ev.target, ed = state.ed;
   if (t.id === 'logDate') { if (t.value) { state.logDate = t.value > today() ? today() : t.value; render(); } return; }
-  if (t.id === 'machPick') { state.machineId = t.value; state.metric = null; render(); return; }
+  if (t.id === 'machPick') { state.machineId = t.value; state.metric = null; state.progFilter = ''; render(); return; }
+  if (t.id === 'progPick') { state.progFilter = t.value; render(); return; }
   if (t.id === 'libQ') { state.libQ = t.value; $('#liblist').innerHTML = libList(); return; }
-  if (t.id === 'niName' && state.newItem) { state.newItem.name = t.value; const b = $('#niMus'); if (b) b.innerHTML = niMus(guessMuscles(t.value)); return; }
+  if (t.id === 'niName' && state.newItem) { state.newItem.name = t.value; const b = $('#niMus'); if (b) b.innerHTML = niMus(defaultMuscles({name:t.value, type:state.newItem.type})); return; }
   if (!ed) return;
   if (t.id === 'edWeight') ed.weight = t.value;
   else if (t.id === 'edMin') { ed.min = t.value; updateDerived(); }
   else if (t.id === 'edSec') { ed.sec = t.value; updateDerived(); }
   else if (t.id === 'edDist') { ed.distance = t.value; updateDerived(); }
+  else if (t.id === 'edLevel') ed.level = t.value;
+  else if (t.id === 'edIncline') ed.incline = t.value;
+  else if (t.id === 'edNewProg') ed.newProgram = t.value;
   else if (t.id === 'edNew') { ed.newName = t.value; const box = $('#edMus'); if (box) box.innerHTML = editorMus(ed); }
   else if (t.dataset.rep != null) ed.reps[+t.dataset.rep] = t.value;
 });
 document.addEventListener('change', ev => {
   const t = ev.target, ed = state.ed;
-  if (t.id === 'machPick' ) return;
+  if (t.id === 'machPick' || t.id === 'progPick') return;
   if (t.id === 'importFile') { importData(t.files[0]); t.value = ''; return; }
   if (!ed) return;
-  if (t.id === 'edMachine') { ed.machineId = t.value; ed.from = null; if (t.value !== '__new') autofill(ed); renderEditor(); }
+  if (t.id === 'edMachine') { ed.machineId = t.value; ed.from = null;
+    if (t.value !== '__new') { if (ed.cardio) ed.type = machine(t.value).type; autofill(ed); } renderEditor(); }
+  else if (t.id === 'edProgram') { ed.program = t.value; renderEditor(); }
   else if (t.id === 'edDate') { if (t.value) ed.date = t.value; }
 });
 document.addEventListener('focusin', ev => { if (ev.target.matches('.setbox input, .stepper input')) setTimeout(()=>ev.target.select && ev.target.select(), 0); });
@@ -1193,7 +1294,10 @@ function sampleDb(){
     (a ? [0,2] : [1,3]).forEach((bi, k) => { const [n, base, inc] = B[bi]; const r = base + Math.floor(wi/2)*inc;
       d.entries.push({id:uid()+'b'+k, created:ts+5+k, date, machineId:id(n), reps:[r, r, Math.max(1, r - (bi===3?10:3))]}); });
     if (wi % 2 === 1 || wi > 11) { const dist = Math.round((1.6 + wi*0.08 + (wi%3)*0.1)*100)/100, pace = 690 - wi*9;
-      d.entries.push({id:uid()+'t', created:ts+9, date, machineId:'treadmill', duration:Math.round(dist*pace), distance:dist, dunit:'mi'}); }
+      const prog = ['Manual','Rolling Hills','Intervals','Sprint 8'][wi % 4];
+      d.entries.push({id:uid()+'t', created:ts+9, date, machineId:'treadmill', duration:Math.round(dist*pace), distance:dist, dunit:'mi', program:prog, incline: prog === 'Rolling Hills' ? 4 : prog === 'Manual' ? 1 : 1.5}); }
+    if (a && wi > 1) d.entries.push({id:uid()+'e', created:ts+8, date, machineId:id('SciFit Upper Body Ergometer'), duration:600 + (wi%3)*120, distance:Math.round((0.9 + wi*0.03)*100)/100, dunit:'mi',
+      program:['Manual','QuickStart','Iso-Strength','Power Burst'][(wi/2|0) % 4], level: 4 + Math.floor(wi/3)});
   });
   return d;
 }

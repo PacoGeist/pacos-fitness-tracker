@@ -1,5 +1,12 @@
 # What's new
 
+## 1.6
+- **Upper body ergometer:** the SciFit Upper Body Ergometer is in the library. Log the program (Manual, QuickStart, Iso-Strength or Power Burst), level, time and distance.
+- **Treadmill incline** and **treadmill programs:** Manual, Rolling Hills, Fat Burn, 5K Training, Sprint 8 and Intervals.
+- **Your own programs:** choose "+ New program…" when logging. Manage them in Settings > Cardio programs.
+- **Cardio history by program:** filter a machine's table and charts to one program. New charts for level and incline.
+- The Workout screen's third button is now **+ Cardio**, covering treadmills and ergometers.
+
 ## 1.5
 - **Settings > App updates:** shows your version and opens the GitHub download page to get the newest one. The app still has no internet access.
 - First version published on GitHub, with automatic builds.

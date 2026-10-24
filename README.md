@@ -20,10 +20,11 @@ Works on Android 8.0 or newer, including every current Samsung Galaxy phone.
 
 - **Weight machines:** log the date, weight, number of sets and reps for each set. Pick a machine you've used before and your last weight, sets and reps fill in automatically.
 - **Bodyweight exercises:** push-ups, crunches, leg lifts, pull-ups and more, with sets and reps. Holds like planks and wall sits count seconds.
-- **Treadmill:** time and distance, with pace and speed worked out for you.
-- **Built-in library:** 41 common gym machines and 48 bodyweight exercises, grouped by body area and searchable by name or muscle. Add your own at any time.
+- **Treadmill:** program (Manual, Rolling Hills, Fat Burn, 5K Training, Sprint 8, Intervals, or your own), time, distance and incline, with pace and speed worked out for you.
+- **Upper body ergometer** (arm bike, such as the SciFit UBE): program (Manual, QuickStart, Iso-Strength, Power Burst, or your own), level, time and distance.
+- **Built-in library:** 41 common gym machines, 48 bodyweight exercises and the SciFit upper body ergometer, grouped by body area and searchable by name or muscle. Add your own at any time.
 - **Muscle diagrams:** front and back body maps show the primary and secondary muscles for every machine, exercise and whole workout. You can change them.
-- **History:** every workout as a list, table or chart, plus the full history of any single machine or exercise.
+- **History:** every workout as a list, table or chart, plus the full history of any single machine or exercise. Cardio history can be filtered by program, for example to compare your Sprint 8 runs.
 - **Repeat a workout:** copy any past workout to today, then adjust each machine.
 - **Past workouts:** the date defaults to today but can be changed to log an earlier session.
 - **Dark and light themes,** pounds or kilograms, miles or kilometers.
